@@ -191,7 +191,7 @@ module Solana::Ruby::Kit
       end
     end
 
-    module_function
+    extend self
 
     # Wraps a callable in a ReactiveActionStore.
     # fn receives the arguments passed to dispatch/dispatch_async.

@@ -24,7 +24,7 @@ module Solana::Ruby::Kit
       const :verify_key,  T.untyped  # RbNaCl::VerifyKey
     end
 
-    module_function
+    extend self
 
     # Generates a fresh Ed25519 key pair using a cryptographically secure RNG.
     # Mirrors `generateKeyPair()` in TypeScript.

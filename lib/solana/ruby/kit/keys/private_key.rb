@@ -7,7 +7,7 @@ require_relative '../errors'
 module Solana::Ruby::Kit
   module Keys
     extend T::Sig
-    module_function
+    extend self
 
     # Creates an Ed25519 signing key from a raw 32-byte private key seed.
     #

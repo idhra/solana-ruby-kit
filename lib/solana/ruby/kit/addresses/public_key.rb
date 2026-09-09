@@ -8,7 +8,7 @@ require_relative '../errors'
 module Solana::Ruby::Kit
   module Addresses
     extend T::Sig
-    module_function
+    extend self
 
     # Given an RbNaCl::VerifyKey (Ed25519 public key), returns its Solana Address.
     #

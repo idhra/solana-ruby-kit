@@ -23,7 +23,7 @@ module Solana::Ruby::Kit
     SET_COMPUTE_UNIT_LIMIT_DISCRIMINATOR             = T.let(2, Integer)
     SET_LOADED_ACCOUNTS_DATA_SIZE_LIMIT_DISCRIMINATOR = T.let(4, Integer)
 
-    module_function
+    extend self
 
     # ---------------------------------------------------------------------------
     # SetComputeUnitLimit instruction helpers

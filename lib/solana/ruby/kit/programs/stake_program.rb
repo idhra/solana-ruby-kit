@@ -40,7 +40,7 @@ module Solana::Ruby::Kit
       DISCRIMINATOR_INITIALIZE    = T.let(0, Integer)
       DISCRIMINATOR_DELEGATE      = T.let(2, Integer)
 
-      module_function
+      extend self
 
       # Builds the two instructions needed to create and initialise a new stake
       # account funded from +from+.

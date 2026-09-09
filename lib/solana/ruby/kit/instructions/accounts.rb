@@ -19,7 +19,7 @@ module Solana::Ruby::Kit
 
     # AccountMeta subtypes — mirrors the four TypeScript convenience types.
 
-    module_function
+    extend self
 
     # Creates a read-only account reference.
     sig { params(address: Addresses::Address).returns(AccountMeta) }

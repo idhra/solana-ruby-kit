@@ -28,7 +28,7 @@ module Solana::Ruby::Kit
       const :space,           T.nilable(Integer)
     end
 
-    module_function
+    extend self
 
     # Builds a MaybeAccount representing a found account.
     sig { params(account: Account).returns(MaybeAccount) }

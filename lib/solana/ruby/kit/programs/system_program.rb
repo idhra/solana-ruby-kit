@@ -27,7 +27,7 @@ module Solana::Ruby::Kit
       # Instruction discriminators (u32 little-endian).
       DISCRIMINATOR_TRANSFER = T.let(2, Integer)
 
-      module_function
+      extend self
 
       # Builds a System Program Transfer instruction that moves +lamports+ from
       # +sender+ to +recipient+.

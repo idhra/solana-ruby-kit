@@ -74,7 +74,7 @@ module Solana::Ruby::Kit
       def kind = :parallel
     end
 
-    module_function
+    extend self
 
     # ── Result factory helpers ────────────────────────────────────────────────
 

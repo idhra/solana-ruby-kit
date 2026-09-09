@@ -19,7 +19,7 @@ module Solana::Ruby::Kit
 
     PROVISORY_LIMIT = T.let(0, Integer)
 
-    module_function
+    extend self
 
     # Returns a callable that estimates the resource limits required by a transaction message
     # by simulating it with maximum limits set, then reading back the actual consumption.

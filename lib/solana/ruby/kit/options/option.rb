@@ -57,7 +57,7 @@ module Solana::Ruby::Kit
     #   accepts Option<T>, T, or nil — useful for codec input.
     OptionOrNullable = T.type_alias { T.untyped }
 
-    module_function
+    extend self
 
     # Wraps a value in Some.  Mirrors `some<T>(value)`.
     sig { params(value: T.untyped).returns(Solana::Ruby::Kit::Options::Some[T.untyped]) }

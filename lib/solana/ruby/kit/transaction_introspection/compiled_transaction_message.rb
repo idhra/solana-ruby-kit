@@ -39,7 +39,7 @@ module Solana::Ruby::Kit
       const :lifetime_token,  String  # base58-encoded blockhash or nonce value
     end
 
-    module_function
+    extend self
 
     # Decodes legacy or v0 compiled transaction message bytes (the
     # `message_bytes` of a `Transactions::Transaction`) into a

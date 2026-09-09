@@ -38,7 +38,7 @@ module Solana::Ruby::Kit
     # Marker bytes appended during hashing: UTF-8 "ProgramDerivedAddress".
     PDA_MARKER_BYTES = T.let('ProgramDerivedAddress'.b, String)
 
-    module_function
+    extend self
 
     # Returns true if the value is a well-formed ProgramDerivedAddress.
     # Mirrors `isProgramDerivedAddress()` in TypeScript.

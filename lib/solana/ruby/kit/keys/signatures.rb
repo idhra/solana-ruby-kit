@@ -60,7 +60,7 @@ module Solana::Ruby::Kit
     SIGNATURE_MIN_STR_LEN = 64
     SIGNATURE_MAX_STR_LEN = 88
 
-    module_function
+    extend self
 
     # Returns true if the string is a valid base58-encoded Ed25519 signature.
     # Mirrors `isSignature()` in TypeScript.

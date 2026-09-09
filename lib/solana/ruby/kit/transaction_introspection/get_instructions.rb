@@ -11,7 +11,7 @@ module Solana::Ruby::Kit
   module TransactionIntrospection
     extend T::Sig
 
-    module_function
+    extend self
 
     # Builds the full ordered list of AccountMetas for a compiled transaction
     # message.

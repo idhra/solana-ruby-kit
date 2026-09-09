@@ -64,7 +64,7 @@ module Solana::Ruby::Kit
 
     # ── Combinators ─────────────────────────────────────────────────────────────
 
-    module_function
+    extend self
 
     # Return a Codec whose output is always exactly +size+ bytes
     # (zero-padded on right, truncated if too large).

@@ -7,7 +7,7 @@ require_relative '../errors'
 module Solana::Ruby::Kit
   module Keys
     extend T::Sig
-    module_function
+    extend self
 
     # Derives the Ed25519 verification (public) key from a signing (private) key.
     #

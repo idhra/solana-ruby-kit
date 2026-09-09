@@ -36,7 +36,7 @@ module Solana::Ruby::Kit
       def version = 1
     end
 
-    module_function
+    extend self
 
     # Asserts that a version 1 offchain message received from an untrusted source is the
     # message it was expected to be.

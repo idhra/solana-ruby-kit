@@ -48,7 +48,7 @@ module Solana::Ruby::Kit
   module PluginCore
     extend T::Sig
 
-    module_function
+    extend self
 
     sig { returns(PluginClient) }
     def create_client

@@ -16,7 +16,7 @@ module Solana::Ruby::Kit
     # The hard maximum number of top-level instructions the transaction format can encode.
     TRANSACTION_INSTRUCTION_LIMIT = T.let(64, Integer)
 
-    module_function
+    extend self
 
     # Resolves the effective maximum number of instructions allowed in a transaction message,
     # falling back to the default when no value is provided.

@@ -11,7 +11,7 @@ module Solana::Ruby::Kit
   module Sysvars
     extend T::Sig
 
-    module_function
+    extend self
 
     # Decode base64 account data from an RpcContextualValue returned by
     # get_account_info(encoding: 'base64').

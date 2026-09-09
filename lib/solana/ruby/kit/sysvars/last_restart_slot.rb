@@ -8,7 +8,7 @@ module Solana::Ruby::Kit
       const :last_restart_slot, Integer
     end
 
-    module_function
+    extend self
 
     sig { params(rpc: Rpc::Client).returns(SysvarLastRestartSlot) }
     def fetch_sysvar_last_restart_slot(rpc)

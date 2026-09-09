@@ -8,7 +8,7 @@ module Solana::Ruby::Kit
   module Subscribable
     extend T::Sig
 
-    module_function
+    extend self
 
     # Adapts a ReactiveStreamStore into an Enumerator, so a *push*-based
     # reactive store can be driven by *pull*-based code that consumes it with

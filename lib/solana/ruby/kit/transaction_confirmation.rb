@@ -10,7 +10,7 @@ module Solana::Ruby::Kit
   module TransactionConfirmation
     extend T::Sig
 
-    module_function
+    extend self
 
     # Poll getSignatureStatuses until +signature+ reaches +commitment+ or
     # the blockheight/timeout deadline is exceeded.

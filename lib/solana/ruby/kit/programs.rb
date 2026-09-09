@@ -13,7 +13,7 @@ module Solana::Ruby::Kit
   module Programs
     extend T::Sig
 
-    module_function
+    extend self
 
     # Returns true when +err+ is a custom program error, optionally matching
     # a specific error code.

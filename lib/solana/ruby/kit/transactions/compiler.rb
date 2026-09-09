@@ -12,7 +12,7 @@ module Solana::Ruby::Kit
     # Maximum wire-encoded transaction size in bytes (Solana protocol limit).
     TRANSACTION_SIZE_LIMIT = T.let(1232, Integer)
 
-    module_function
+    extend self
 
     # Returns the compiled byte-size of a transaction message.
     # Mirrors `getTransactionMessageSize()` from @solana/transactions.
@@ -174,7 +174,7 @@ module Solana::Ruby::Kit
     #   [message bytes]
     #
     # The result is a binary String; base64-encode it before sending via HTTP.
-    sig { params(transaction: Transaction).returns(String) }
+    sig { params(transaction: AnyTransaction).returns(String) }
     def wire_encode_transaction(transaction)
       sigs    = transaction.signatures
       header  = encode_compact_u16(sigs.size)

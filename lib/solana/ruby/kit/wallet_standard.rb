@@ -54,7 +54,7 @@ module Solana::Ruby::Kit
     DISCONNECT                = T.let('standard:disconnect',           String)
     EVENTS                    = T.let('standard:events',               String)
 
-    module_function
+    extend self
 
     # ── Wire-format decoder ───────────────────────────────────────────────────
 
@@ -165,7 +165,7 @@ module Solana::Ruby::Kit
     # any signature does not verify.  Nil (unfilled) slots are skipped silently;
     # use +Transactions.assert_fully_signed_transaction!+ to enforce that all
     # required signers have signed.
-    sig { params(transaction: Transactions::Transaction).void }
+    sig { params(transaction: Transactions::AnyTransaction).void }
     def verify_transaction_signatures!(transaction)
       transaction.signatures.each do |addr_str, sig_raw|
         next if sig_raw.nil?
@@ -201,7 +201,7 @@ module Solana::Ruby::Kit
     # Returns +true+ if +address+ has provided a cryptographically valid
     # signature for +transaction+; +false+ if the slot is absent, nil, or the
     # signature does not verify against +transaction.message_bytes+.
-    sig { params(transaction: Transactions::Transaction, address: Addresses::Address).returns(T::Boolean) }
+    sig { params(transaction: Transactions::AnyTransaction, address: Addresses::Address).returns(T::Boolean) }
     def signed_by?(transaction, address)
       sig_raw = transaction.signatures[address.value]
       return false if sig_raw.nil?

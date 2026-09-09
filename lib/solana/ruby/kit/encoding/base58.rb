@@ -13,7 +13,7 @@ module Solana::Ruby::Kit
         String
       )
 
-      module_function
+      extend self
 
       # Encodes a binary String to a base58 string.
       sig { params(bytes: String).returns(String) }

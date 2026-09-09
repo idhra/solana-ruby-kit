@@ -61,7 +61,7 @@ module Solana::Ruby::Kit
     ADDRESS_MIN_STR_LEN = T.let(32, Integer)
     ADDRESS_MAX_STR_LEN = T.let(44, Integer)
 
-    module_function
+    extend self
 
     # Encodes raw bytes (binary String, length == 32) to a base58 address string.
     # Mirrors `getAddressEncoder()` in TypeScript.

@@ -59,7 +59,7 @@ module Solana::Ruby::Kit
       end
     end
 
-    module_function
+    extend self
 
     # Creates a KeyPairSigner from an existing Keys::KeyPair.
     # Mirrors `createSignerFromKeyPair(keyPair)`.

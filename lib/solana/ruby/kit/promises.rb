@@ -10,7 +10,7 @@ module Solana::Ruby::Kit
   module Promises
     extend T::Sig
 
-    module_function
+    extend self
 
     # Run each callable in a dedicated thread and return the first result.
     # All losing threads are killed to avoid memory leaks — analogous to the

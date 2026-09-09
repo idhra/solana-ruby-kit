@@ -19,7 +19,7 @@ module Solana::Ruby::Kit
 
       ALL = T.let([READONLY, WRITABLE, READONLY_SIGNER, WRITABLE_SIGNER].freeze, T::Array[Integer])
 
-      module_function
+      extend self
 
       # Returns true if the role requires the account to sign the transaction.
       sig { params(role: Integer).returns(T::Boolean) }

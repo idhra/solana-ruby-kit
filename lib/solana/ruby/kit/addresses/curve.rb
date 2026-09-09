@@ -27,7 +27,7 @@ module Solana::Ruby::Kit
     # sqrt(−1) mod p  =  2^((p−1)/4) mod p
     CURVE_SQRT_M1 = T.let(2.pow((CURVE_P - 1) / 4, CURVE_P), Integer)
 
-    module_function
+    extend self
 
     # Returns true if the 32-byte binary string represents a point on the
     # Ed25519 twisted-Edwards curve.

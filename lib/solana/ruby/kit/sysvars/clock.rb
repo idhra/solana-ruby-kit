@@ -17,7 +17,7 @@ module Solana::Ruby::Kit
 
     CLOCK_SIZE = T.let(40, Integer)
 
-    module_function
+    extend self
 
     sig { params(rpc: Rpc::Client).returns(SysvarClock) }
     def fetch_sysvar_clock(rpc)

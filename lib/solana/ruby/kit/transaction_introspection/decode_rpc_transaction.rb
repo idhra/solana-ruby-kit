@@ -31,7 +31,7 @@ module Solana::Ruby::Kit
       const :transaction,      T.nilable(Transactions::Transaction)
     end
 
-    module_function
+    extend self
 
     # Decodes a confirmed-transaction RPC response (any of `encoding: 'base64'`,
     # `'base58'`, or `'json'`) into a CompiledTransactionMessage plus, for

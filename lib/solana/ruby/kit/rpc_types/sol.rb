@@ -55,7 +55,7 @@ module Solana::Ruby::Kit
     SOL_SCALE       = T.let(1_000_000_000, Integer)
     SOL_RAW_MAX     = T.let(Kernel.Integer(2**64 - 1), Integer)
 
-    module_function
+    extend self
 
     # Parses a decimal string and returns a Sol value.
     # Raises FIXED_POINTS__STRICT_MODE_PRECISION_LOSS if the string has more

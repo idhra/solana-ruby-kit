@@ -199,7 +199,7 @@ module Solana::Ruby::Kit
       end
     end
 
-    module_function
+    extend self
 
     # Creates a ReactiveStreamStore backed by a ready-made DataPublisher.
     # retry() is not supported — see create_reactive_store_from_data_publisher_factory.

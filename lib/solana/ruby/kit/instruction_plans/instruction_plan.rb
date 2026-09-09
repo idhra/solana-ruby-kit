@@ -97,7 +97,7 @@ module Solana::Ruby::Kit
 
     # ── Factory helpers ────────────────────────────────────────────────────────
 
-    module_function
+    extend self
 
     # Wraps a single instruction in a plan.
     # Mirrors `singleInstructionPlan(instruction)`.

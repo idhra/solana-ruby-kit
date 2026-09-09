@@ -11,7 +11,7 @@ module Solana::Ruby::Kit
   module InstructionPlans
     extend T::Sig
 
-    module_function
+    extend self
 
     # Creates a TransactionPlanner — a callable that converts an InstructionPlan
     # into a TransactionPlan by packing instructions into transaction messages.
@@ -71,7 +71,7 @@ module Solana::Ruby::Kit
 
     # ── Private helpers ────────────────────────────────────────────────────────
 
-    module_function
+    extend self
 
     sig { params(plan: T.untyped, ctx: T.untyped).returns(T.untyped) }
 

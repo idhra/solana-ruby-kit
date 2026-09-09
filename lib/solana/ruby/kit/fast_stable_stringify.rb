@@ -8,7 +8,7 @@ module Solana::Ruby::Kit
   module FastStableStringify
     extend T::Sig
 
-    module_function
+    extend self
 
     # Serialize +value+ to a deterministic JSON string.
     # Hash keys are sorted lexicographically at every level.

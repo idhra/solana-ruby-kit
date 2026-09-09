@@ -57,7 +57,7 @@ module Solana::Ruby::Kit
       const :address_table_lookups, T.nilable(T::Hash[String, T::Array[Integer]])
     end
 
-    module_function
+    extend self
 
     # Creates an empty transaction message at the given version.
     # Mirrors `createTransactionMessage({ version })`.

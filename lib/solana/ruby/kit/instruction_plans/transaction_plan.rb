@@ -41,7 +41,7 @@ module Solana::Ruby::Kit
       def kind = :parallel
     end
 
-    module_function
+    extend self
 
     # Creates a single-message plan.
     # Mirrors `singleTransactionPlan(transactionMessage)`.

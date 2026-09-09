@@ -9,7 +9,7 @@ module Solana::Ruby::Kit
   module InstructionPlans
     extend T::Sig
 
-    module_function
+    extend self
 
     # Creates a TransactionPlanExecutor — a callable that traverses a TransactionPlan,
     # executing each single transaction message and collecting results.
@@ -111,7 +111,7 @@ module Solana::Ruby::Kit
 
     # ── Private helpers ────────────────────────────────────────────────────────
 
-    module_function
+    extend self
 
     sig { params(plan: T.untyped, execute_fn: T.untyped, state: T.untyped).returns(T.untyped) }
 

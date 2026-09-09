@@ -11,7 +11,7 @@ module Solana::Ruby::Kit
   module TransactionIntrospection
     extend T::Sig
 
-    module_function
+    extend self
 
     # Returns every instruction in a confirmed transaction as
     # TracedInstructions, in the order an explorer displays them: each outer

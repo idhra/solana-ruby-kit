@@ -18,7 +18,7 @@ module Solana::Ruby::Kit
       const :data,            T.nilable(String)  # binary String (Uint8Array equivalent)
     end
 
-    module_function
+    extend self
 
     # Returns true if the instruction targets the given program address.
     # Mirrors `isInstructionForProgram()`.

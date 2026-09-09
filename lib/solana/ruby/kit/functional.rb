@@ -6,7 +6,7 @@ module Solana::Ruby::Kit
   # Mirrors the TypeScript package @solana/functional.
   module Functional
     extend T::Sig
-    module_function
+    extend self
 
     # Passes an initial value through a series of single-argument callables,
     # returning the final result.

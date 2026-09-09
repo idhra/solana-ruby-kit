@@ -14,7 +14,7 @@ module Solana::Ruby::Kit
       T.untyped
     )
 
-    module_function
+    extend self
 
     sig { params(raw: T::Hash[String, T.untyped]).returns(T.untyped) }
     def parse_address_lookup_table(raw)

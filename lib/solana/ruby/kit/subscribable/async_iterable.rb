@@ -20,7 +20,7 @@ module Solana::Ruby::Kit
       # Sentinel value pushed into the queue when the stream is done.
       DONE = T.let(Object.new.freeze, Object)
 
-      module_function
+      extend self
 
       # @param publisher [DataPublisher]
       # @param data_channel channel name for data messages

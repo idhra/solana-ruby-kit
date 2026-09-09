@@ -15,7 +15,7 @@ module Solana::Ruby::Kit
 
       MAGIC = T.let("\xFF\xFF".b.freeze, String)
 
-      module_function
+      extend self
 
       # Serialize a Message to its canonical binary form.
       sig { params(msg: Message).returns(String) }

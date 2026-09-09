@@ -16,7 +16,7 @@ module Solana::Ruby::Kit
     # A requested heap frame size must be a whole number of KiB.
     HEAP_SIZE_MULTIPLE_OF = T.let(1024, Integer)
 
-    module_function
+    extend self
 
     # Raises if the given compute unit limit is one the runtime will not honor as written.
     #

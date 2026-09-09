@@ -22,7 +22,7 @@ module Solana::Ruby::Kit
       T::Array[Symbol]
     )
 
-    module_function
+    extend self
 
     # Returns a numeric score for a commitment level (higher = more confirmed).
     # Mirrors `getCommitmentScore()`.

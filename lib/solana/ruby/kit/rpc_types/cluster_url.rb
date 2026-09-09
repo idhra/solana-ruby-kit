@@ -24,7 +24,7 @@ module Solana::Ruby::Kit
       def to_s = @url
     end
 
-    module_function
+    extend self
 
     # Wraps a URL string and tags it as mainnet.
     # Mirrors `mainnet(url)`.

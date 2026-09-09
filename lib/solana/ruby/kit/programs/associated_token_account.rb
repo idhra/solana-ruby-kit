@@ -47,7 +47,7 @@ module Solana::Ruby::Kit
         Addresses::Address
       )
 
-      module_function
+      extend self
 
       # Derives the canonical Associated Token Account address (a PDA) for a
       # given wallet and mint.

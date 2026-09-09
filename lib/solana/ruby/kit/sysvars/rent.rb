@@ -11,7 +11,7 @@ module Solana::Ruby::Kit
       const :burn_percent,           Integer
     end
 
-    module_function
+    extend self
 
     sig { params(rpc: Rpc::Client).returns(SysvarRent) }
     def fetch_sysvar_rent(rpc)

@@ -10,7 +10,7 @@ module Solana::Ruby::Kit
   module TransactionIntrospection
     extend T::Sig
 
-    module_function
+    extend self
 
     # Returns the inner instructions in a transaction `meta` as
     # TracedInstructions.

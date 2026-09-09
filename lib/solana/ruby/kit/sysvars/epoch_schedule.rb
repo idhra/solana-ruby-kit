@@ -14,7 +14,7 @@ module Solana::Ruby::Kit
       const :first_normal_slot,            Integer
     end
 
-    module_function
+    extend self
 
     sig { params(rpc: Rpc::Client).returns(SysvarEpochSchedule) }
     def fetch_sysvar_epoch_schedule(rpc)

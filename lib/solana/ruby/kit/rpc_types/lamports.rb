@@ -15,7 +15,7 @@ module Solana::Ruby::Kit
 
     LAMPORTS_U64_MAX = T.let(T.unsafe(2**64 - 1), Integer)
 
-    module_function
+    extend self
 
     # Returns true if the integer is a valid u64 lamport value.
     # Mirrors `isLamports()`.
