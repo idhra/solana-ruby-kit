@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    solana-ruby-kit (8.2.0)
+    solana-ruby-kit (8.3.0)
       bigdecimal (>= 3.1, < 5)
       openssl (~> 3.3)
       rbnacl (~> 7.1)

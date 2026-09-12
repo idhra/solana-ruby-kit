@@ -63,8 +63,23 @@ module Solana::Ruby::Kit
 
       # Encode/decode a variable-length array with a u32LE length prefix.
       # When +size+ is given the array has a fixed element count (no prefix).
-      sig { params(element_codec: Codec, size: T.nilable(Integer)).returns(Codec) }
-      def array_codec(element_codec, size: nil)
+      #
+      # When the size is stored as a prefix and there are not enough bytes left
+      # to read it, the decoder yields an empty array rather than failing. That
+      # is deliberate: it lets a program append a collection to an existing
+      # account layout and still decode accounts written before the change.
+      # Formats that cannot accept that leniency - borsh, for one, requires the
+      # prefix to be present - can pass +require_size_prefix: true+ to make a
+      # truncated buffer raise instead. The option has no effect when +size+ is
+      # given, since a fixed-count array carries no prefix.
+      sig do
+        params(
+          element_codec:       Codec,
+          size:                T.nilable(Integer),
+          require_size_prefix: T::Boolean
+        ).returns(Codec)
+      end
+      def array_codec(element_codec, size: nil, require_size_prefix: false)
         if size
           fixed = element_codec.fixed_size ? size * T.must(element_codec.fixed_size) : nil
           enc = Encoder.new(fixed_size: fixed) do |values|
@@ -90,6 +105,19 @@ module Solana::Ruby::Kit
             header + body
           end
           dec = Decoder.new do |bytes, offset|
+            prefix_size = T.must(prefix.fixed_size)
+            remaining   = [bytes.b.bytesize - offset, 0].max
+            if remaining < prefix_size
+              # The prefix is missing or truncated. By default that decodes to
+              # an empty collection having consumed nothing; under
+              # +require_size_prefix+ it is an error.
+              Kernel.raise SolanaError.new(
+                SolanaError::CODECS__INVALID_BYTE_LENGTH,
+                { expected: prefix_size, actual: remaining }
+              ) if require_size_prefix
+
+              next [[], 0]
+            end
             len, prefix_bytes = prefix.decode(bytes, offset: offset)
             result   = []
             consumed = prefix_bytes
@@ -106,10 +134,18 @@ module Solana::Ruby::Kit
 
       # Encode/decode a Hash.
       # Encoded as: [length prefix] + [key, value, key, value, ...]
-      sig { params(key_codec: Codec, value_codec: Codec, size: T.nilable(Integer)).returns(Codec) }
-      def map_codec(key_codec, value_codec, size: nil)
+      # See +array_codec+ for what +require_size_prefix+ does.
+      sig do
+        params(
+          key_codec:           Codec,
+          value_codec:         Codec,
+          size:                T.nilable(Integer),
+          require_size_prefix: T::Boolean
+        ).returns(Codec)
+      end
+      def map_codec(key_codec, value_codec, size: nil, require_size_prefix: false)
         pair_codec = tuple_codec([key_codec, value_codec])
-        array_codec(pair_codec, size: size).transform_decoder do |pairs|
+        array_codec(pair_codec, size: size, require_size_prefix: require_size_prefix).transform_decoder do |pairs|
           pairs.each_with_object({}) { |(k, v), h| h[k] = v }
         end.transform_encoder do |hash|
           T.cast(hash, T::Hash[T.untyped, T.untyped]).map { |k, v| [k, v] }
@@ -117,9 +153,16 @@ module Solana::Ruby::Kit
       end
 
       # Encode/decode a Set (stored as an array of unique elements).
-      sig { params(element_codec: Codec, size: T.nilable(Integer)).returns(Codec) }
-      def set_codec(element_codec, size: nil)
-        array_codec(element_codec, size: size)
+      # See +array_codec+ for what +require_size_prefix+ does.
+      sig do
+        params(
+          element_codec:       Codec,
+          size:                T.nilable(Integer),
+          require_size_prefix: T::Boolean
+        ).returns(Codec)
+      end
+      def set_codec(element_codec, size: nil, require_size_prefix: false)
+        array_codec(element_codec, size: size, require_size_prefix: require_size_prefix)
           .transform_encoder { |s| T.cast(s, T::Set[T.untyped]).to_a }
           .transform_decoder { |arr| Set.new(arr) }
       end

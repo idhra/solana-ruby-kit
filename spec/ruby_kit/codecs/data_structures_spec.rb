@@ -68,4 +68,55 @@ RSpec.describe RubyKit::Codecs::DataStructures do
       expect(decoded.value).to eq(42)
     end
   end
+
+  # A prefixed collection decodes an exhausted buffer to an empty collection so
+  # that a program can append a collection to an existing account layout and
+  # still read accounts written before the change. Formats that cannot accept
+  # that - borsh requires the prefix - opt into failing via require_size_prefix.
+  describe 'require_size_prefix' do
+    it 'decodes an exhausted buffer to an empty array by default' do
+      expect(array_codec(u8_codec).decode(''.b)).to eq([[], 0])
+    end
+
+    it 'consumes nothing when the prefix is absent' do
+      _value, consumed = array_codec(u8_codec).decode(''.b)
+      expect(consumed).to eq(0)
+    end
+
+    it 'decodes a truncated prefix to an empty array by default' do
+      expect(array_codec(u8_codec).decode("\x01\x00".b)).to eq([[], 0])
+    end
+
+    it 'raises when the prefix is absent and required' do
+      expect { array_codec(u8_codec, require_size_prefix: true).decode(''.b) }
+        .to raise_error(RubyKit::SolanaError, /Expected 4 bytes but got 0/)
+    end
+
+    it 'raises when the prefix is truncated and required' do
+      expect { array_codec(u8_codec, require_size_prefix: true).decode("\x01\x00".b) }
+        .to raise_error(RubyKit::SolanaError, /Expected 4 bytes but got 2/)
+    end
+
+    it 'still round-trips normally when required' do
+      codec = array_codec(u8_codec, require_size_prefix: true)
+      expect(codec.decode(codec.encode([1, 2, 3])).first).to eq([1, 2, 3])
+    end
+
+    it 'is ignored for fixed-count arrays, which carry no prefix' do
+      codec = array_codec(u8_codec, size: 2, require_size_prefix: true)
+      expect(codec.decode("\x07\x08".b)).to eq([[7, 8], 2])
+    end
+
+    it 'applies to set_codec' do
+      expect(set_codec(u8_codec).decode(''.b).first).to eq(Set.new)
+      expect { set_codec(u8_codec, require_size_prefix: true).decode(''.b) }
+        .to raise_error(RubyKit::SolanaError)
+    end
+
+    it 'applies to map_codec' do
+      expect(map_codec(u8_codec, u8_codec).decode(''.b).first).to eq({})
+      expect { map_codec(u8_codec, u8_codec, require_size_prefix: true).decode(''.b) }
+        .to raise_error(RubyKit::SolanaError)
+    end
+  end
 end

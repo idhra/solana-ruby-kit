@@ -19,6 +19,43 @@ module Solana::Ruby::Kit
       # defeated the "directly available as Codecs.x" intent in codecs.rb.
       extend self
 
+      # ── Multi-byte integers ──────────────────────────────────────────────────
+
+      # Shared implementation behind u128 / i128 / u256 / i256.
+      #
+      # Upstream splits these values into 64-bit words because a JS `DataView`
+      # has no accessor wider than 64 bits. Ruby's Integer is arbitrary
+      # precision, so there is nothing to split: the value is shifted out one
+      # byte at a time and reassembled the same way, which keeps a single
+      # implementation correct for any +byte_count+.
+      #
+      # +signed+ selects two's-complement interpretation over +byte_count * 8+
+      # bits, so negative values round-trip.
+      sig { params(byte_count: Integer, signed: T::Boolean, endian: Symbol).returns(Codec) }
+      def big_int_codec(byte_count, signed:, endian: :little)
+        bits = byte_count * 8
+        enc = Encoder.new(fixed_size: byte_count) do |v|
+          n = Kernel.Integer(v)
+          n += (1 << bits) if signed && n.negative?
+          out = Array.new(byte_count) do
+            byte = n & 0xFF
+            n >>= 8
+            byte
+          end
+          # `out` is least-significant-byte first.
+          (endian == :little ? out : out.reverse).pack('C*')
+        end
+        dec = Decoder.new(fixed_size: byte_count) do |bytes, offset|
+          slice = bytes.b.byteslice(offset, byte_count) || ("\x00" * byte_count).b
+          arr   = T.cast(T.unsafe(slice).unpack('C*'), T::Array[Integer])
+          arr   = arr.reverse if endian == :little
+          n     = arr.reduce(0) { |acc, byte| (acc << 8) | byte }
+          n -= (1 << bits) if signed && n >= (1 << (bits - 1))
+          [n, byte_count]
+        end
+        Codec.new(enc, dec)
+      end
+
       # ── Unsigned integers ────────────────────────────────────────────────────
 
       sig { returns(Codec) }
@@ -62,29 +99,12 @@ module Solana::Ruby::Kit
 
       sig { params(endian: Symbol).returns(Codec) }
       def u128_codec(endian: :little)
-        enc = Encoder.new(fixed_size: 16) do |v|
-          n = Kernel.Integer(v)
-          if endian == :little
-            bytes = []
-            16.times { bytes << (n & 0xFF); n >>= 8 }
-            bytes.pack('C*')
-          else
-            bytes = []
-            16.times { bytes.unshift(n & 0xFF); n >>= 8 }
-            bytes.pack('C*')
-          end
-        end
-        dec = Decoder.new(fixed_size: 16) do |bytes, offset|
-          slice = bytes.b.byteslice(offset, 16) || ("\x00" * 16).b
-          arr   = T.cast(T.unsafe(slice).unpack('C*'), T::Array[Integer])
-          n = if endian == :little
-                arr.reverse.reduce(0) { |acc, b| (acc << 8) | b }
-              else
-                arr.reduce(0) { |acc, b| (acc << 8) | b }
-              end
-          [n, 16]
-        end
-        Codec.new(enc, dec)
+        big_int_codec(16, signed: false, endian: endian)
+      end
+
+      sig { params(endian: Symbol).returns(Codec) }
+      def u256_codec(endian: :little)
+        big_int_codec(32, signed: false, endian: endian)
       end
 
       # ── Signed integers ──────────────────────────────────────────────────────
@@ -130,33 +150,12 @@ module Solana::Ruby::Kit
 
       sig { params(endian: Symbol).returns(Codec) }
       def i128_codec(endian: :little)
-        enc = Encoder.new(fixed_size: 16) do |v|
-          n    = Kernel.Integer(v)
-          # Two's complement for negative numbers
-          n += (1 << 128) if n.negative?
-          if endian == :little
-            bytes = []
-            16.times { bytes << (n & 0xFF); n >>= 8 }
-            bytes.pack('C*')
-          else
-            bytes = []
-            16.times { bytes.unshift(n & 0xFF); n >>= 8 }
-            bytes.pack('C*')
-          end
-        end
-        dec = Decoder.new(fixed_size: 16) do |bytes, offset|
-          slice = bytes.b.byteslice(offset, 16) || ("\x00" * 16).b
-          arr   = T.cast(T.unsafe(slice).unpack('C*'), T::Array[Integer])
-          n = if endian == :little
-                arr.reverse.reduce(0) { |acc, b| (acc << 8) | b }
-              else
-                arr.reduce(0) { |acc, b| (acc << 8) | b }
-              end
-          # Convert from unsigned to signed 128-bit
-          n -= (1 << 128) if n >= (1 << 127)
-          [n, 16]
-        end
-        Codec.new(enc, dec)
+        big_int_codec(16, signed: true, endian: endian)
+      end
+
+      sig { params(endian: Symbol).returns(Codec) }
+      def i256_codec(endian: :little)
+        big_int_codec(32, signed: true, endian: endian)
       end
 
       # ── Floating point ───────────────────────────────────────────────────────

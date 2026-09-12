@@ -360,20 +360,25 @@ Binary encoder/decoder framework for Solana on-chain data.
 ```ruby
 Codecs = Solana::Ruby::Kit::Codecs
 
-# Numbers
-u8  = Codecs.u8
-u16 = Codecs.u16_le   # little-endian (default for Solana)
-u32 = Codecs.u32_le
-u64 = Codecs.u64_le
-i8  = Codecs.i8
-f32 = Codecs.f32_le
+# Numbers. Every multi-byte codec takes `endian:`, defaulting to :little
+# (which is what Solana uses on-chain).
+u8   = Codecs.u8_codec
+u16  = Codecs.u16_codec
+u32  = Codecs.u32_codec
+u64  = Codecs.u64_codec
+u128 = Codecs.u128_codec
+u256 = Codecs.u256_codec              # 32 bytes
+i8   = Codecs.i8_codec
+i256 = Codecs.i256_codec              # 32 bytes, two's complement
+f32  = Codecs.f32_codec
+be   = Codecs.u16_codec(endian: :big)
 
-u16.encode(1000)       # => "\xe8\x03"
-u16.decode("\xe8\x03") # => 1000
+u16.encode(1000)         # => "\xe8\x03"
+u16.decode("\xe8\x03")   # => [1000, 2]   # [value, bytes consumed]
 
 # Strings
-utf8  = Codecs.utf8
-bytes = Codecs.bytes_codec
+utf8  = Codecs.utf8_codec
+bytes = Codecs.bytes_codec(32)
 
 # Data structures
 struct_codec = Codecs.struct_codec([
@@ -381,6 +386,71 @@ struct_codec = Codecs.struct_codec([
   ['mint',   bytes]
 ])
 ```
+
+#### UTF-8 options
+
+By default the UTF-8 codec substitutes `U+FFFD` for malformed input, strips a
+leading byte order mark, and strips null characters - the last of which is what
+makes fixed-size padded strings read back cleanly, at the cost of being lossy
+for strings that legitimately contain nulls.
+
+```ruby
+# Reject invalid UTF-8 instead of substituting the replacement character.
+strict = Codecs.utf8_codec(fatal: true)
+strict.encode("a\xC0\x80")   # raises SolanaError (invalid UTF-8 string)
+strict.decode("\xFF".b)      # raises SolanaError (invalid UTF-8 bytes)
+
+# Decode losslessly, keeping null characters and a leading byte order mark.
+lossless = Codecs.utf8_codec(ignore_bom: true, remove_null_characters: false)
+
+# The assertions are usable on their own.
+Codecs.find_malformed_utf8_sequence_offset("a\xC0\x80".b)  # => 1 (overlong)
+Codecs.assert_is_well_formed_utf8_bytes("\xE8\xAA\x9E".b)  # passes ("語")
+Codecs.remove_null_characters("a\x00b")                        # => "ab"
+```
+
+Note that `ignore_bom` follows `TextDecoder`'s confusing spelling: the default,
+`false`, *strips* the mark; `true` keeps it.
+
+#### Requiring a size prefix
+
+A prefixed collection decodes an exhausted buffer to an empty collection rather
+than failing, so a program can append a collection to an existing account layout
+and still read accounts written before the change. Formats that cannot accept
+that leniency - borsh requires the prefix to be present - can opt into failing:
+
+```ruby
+Codecs.array_codec(u8).decode(''.b)                              # => [[], 0]
+Codecs.array_codec(u8, require_size_prefix: true).decode(''.b)   # raises SolanaError
+```
+
+`map_codec` and `set_codec` take the same option. It has no effect on
+fixed-count collections, which carry no prefix.
+
+#### Tap combinators
+
+Wrap a codec in one that observes a value - or the bytes - without changing it,
+for validation guards or logging. A tap that raises aborts the operation.
+
+```ruby
+guarded = Codecs.tap_encoder(u8.encoder) do |value|
+  raise ArgumentError, 'Value must not exceed 100' if value > 100
+end
+guarded.encode(42)   # => "\x2a"
+guarded.encode(200)  # raises ArgumentError
+
+# Both sides at once; decode_tap is optional.
+Codecs.tap_codec(u8, encode_tap: ->(v) { log(v) }, decode_tap: ->(v) { log(v) })
+
+# Observe the bytes instead of the value.
+Codecs.tap_decoder_bytes(u8.decoder) do |bytes, offset|
+  raise ArgumentError, 'Expected a 0 or a 1' if bytes.bytes[offset] > 1
+end
+```
+
+Upstream's byte taps take `(bytes, pre_offset, post_offset)` because encoders
+there write into a shared buffer. A Ruby `Encoder` returns a standalone byte
+String, so the encode-side taps receive exactly the bytes that were written.
 
 ### `Solana::Ruby::Kit::RpcSubscriptions` — `@solana/rpc-subscriptions`
 

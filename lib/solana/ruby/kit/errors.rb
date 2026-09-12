@@ -95,6 +95,10 @@ module Solana::Ruby::Kit
     CODECS__INVALID_BYTE_LENGTH                          = :SOLANA_ERROR__CODECS__INVALID_BYTE_LENGTH
     CODECS__EXPECTED_ZERO_VALUE_TO_MATCH_ITEM_FIXED_DISCRIMINATOR = :SOLANA_ERROR__CODECS__EXPECTED_ZERO_VALUE_TO_MATCH_ITEM_FIXED_DISCRIMINATOR
     CODECS__FIXED_NULLABLE_CANNOT_WRAP_VARIABLE_SIZE_CODEC = :SOLANA_ERROR__CODECS__FIXED_NULLABLE_CANNOT_WRAP_VARIABLE_SIZE_CODEC
+    # context: { bytes:, offset: }
+    CODECS__INVALID_UTF8_BYTES                           = :SOLANA_ERROR__CODECS__INVALID_UTF8_BYTES
+    # context: { index:, value: }
+    CODECS__INVALID_UTF8_STRING                          = :SOLANA_ERROR__CODECS__INVALID_UTF8_STRING
 
     # ── RPC / JSON-RPC ────────────────────────────────────────────────────────
     RPC__INTEGER_OVERFLOW_WHILE_SERIALIZING_LARGE_INTEGER = :SOLANA_ERROR__RPC__INTEGER_OVERFLOW_WHILE_SERIALIZING_LARGE_INTEGER
@@ -244,6 +248,8 @@ module Solana::Ruby::Kit
         CODECS__INVALID_BYTE_LENGTH                      => 'Expected %{expected} bytes but got %{actual}',
         CODECS__EXPECTED_ZERO_VALUE_TO_MATCH_ITEM_FIXED_DISCRIMINATOR => 'Expected zero value to match fixed discriminator',
         CODECS__FIXED_NULLABLE_CANNOT_WRAP_VARIABLE_SIZE_CODEC => 'A fixed-size nullable codec cannot wrap a variable-size codec',
+        CODECS__INVALID_UTF8_BYTES                       => 'Invalid UTF-8 byte sequence at offset %{offset}',
+        CODECS__INVALID_UTF8_STRING                      => 'Invalid UTF-8 string at index %{index}',
 
         # RPC
         RPC__INTEGER_OVERFLOW_WHILE_SERIALIZING_LARGE_INTEGER   => 'Integer overflow while serializing large integer %{value}',
