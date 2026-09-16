@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.version               = Solana::Ruby::Kit::VERSION
   spec.authors               = ['Paul Zupan, Idhra Inc.']
   spec.summary               = 'Ruby port of the Anza TypeScript SDK (@anza-xyz/kit)'
-  spec.homepage              = 'https://github.com/pzupan/solana-ruby-kit'
+  spec.homepage              = 'https://github.com/idhra/solana-ruby-kit'
   spec.license               = 'MIT'
   spec.required_ruby_version = '>= 3.2.0'
   spec.require_paths         = ['lib']
