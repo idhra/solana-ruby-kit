@@ -200,20 +200,56 @@ module Solana::Ruby::Kit
           bytes.pack('C*')
         end
         dec = Decoder.new do |bytes, offset|
-          b  = bytes.b
-          n  = 0
-          shift = 0
-          consumed = 0
-          Kernel.loop do
-            byte = b.byteslice(offset + consumed, 1)&.unpack1('C') || 0
-            consumed += 1
-            n |= (byte & 0x7F) << shift
-            shift += 7
-            break if (byte & 0x80).zero?
+          b = bytes.b
+          n = 0
+          decoded = (1..3).each do |byte_count|
+            # The chain must terminate within the bytes that remain; a buffer
+            # that ends mid-chain is truncated, not an implicit zero byte.
+            remaining = b.bytesize - offset
+            if remaining < byte_count
+              Kernel.raise SolanaError.new(
+                SolanaError::CODECS__INVALID_BYTE_LENGTH,
+                { codec_description: 'shortU16', expected: byte_count, actual: [remaining, 0].max }
+              )
+            end
+
+            byte = T.must(b.getbyte(offset + byte_count - 1))
+            n |= (byte & 0x7F) << ((byte_count - 1) * 7)
+            next unless (byte & 0x80).zero?
+
+            Numbers.assert_short_u16_in_range(n)
+            break [n, byte_count]
           end
-          [n, consumed]
+          # `each` only returns its range when no byte terminated the chain.
+          next decoded if decoded.is_a?(Array)
+
+          Numbers.raise_short_u16_too_long
         end
         Codec.new(enc, dec)
+      end
+
+      # Three terminated shortU16 bytes can hold up to 2^21 - 1, but only the
+      # u16 domain is valid. Shared with the wire-format readers in
+      # WalletStandard and TransactionIntrospection, which decode shortU16
+      # inline so they can raise their own truncation errors.
+      sig { params(value: Integer).void }
+      def assert_short_u16_in_range(value)
+        return if value <= 0xFFFF
+
+        Kernel.raise SolanaError.new(
+          SolanaError::CODECS__NUMBER_OUT_OF_RANGE,
+          { codec_description: 'shortU16', min: 0, max: 0xFFFF, value: value }
+        )
+      end
+
+      # Raised when all three shortU16 bytes carry a continuation bit: the
+      # encoding would need a fourth byte, which the format does not allow.
+      sig { returns(T.noreturn) }
+      def raise_short_u16_too_long
+        Kernel.raise SolanaError.new(
+          SolanaError::CODECS__INVALID_BYTE_LENGTH,
+          { codec_description: 'shortU16', expected: 3, actual: 4 }
+        )
       end
     end
   end

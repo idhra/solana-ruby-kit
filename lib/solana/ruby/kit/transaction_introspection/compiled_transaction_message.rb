@@ -154,14 +154,15 @@ module Solana::Ruby::Kit
     sig { params(bytes: String, offset: Integer).returns([Integer, Integer]) }
     def decode_compact_u16(bytes, offset)
       value = 0
-      shift = 0
-      Kernel.loop do
+      (0...3).each do |i|
         byte, offset = read_byte(bytes, offset)
-        value |= (byte & 0x7f) << shift
-        shift += 7
-        break unless (byte & 0x80) != 0
+        value |= (byte & 0x7f) << (i * 7)
+        next unless (byte & 0x80).zero?
+
+        Codecs::Numbers.assert_short_u16_in_range(value)
+        return [value, offset]
       end
-      [value, offset]
+      Codecs::Numbers.raise_short_u16_too_long
     end
     private_class_method :decode_compact_u16
   end

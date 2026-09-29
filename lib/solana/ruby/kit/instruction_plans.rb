@@ -3,7 +3,7 @@
 
 # Mirrors @solana/instruction-plans.
 # An InstructionPlan describes operations that may span multiple transactions.
-require_relative 'instruction_plans/max_instructions'
+require_relative 'instruction_plans/message_packer_errors'
 require_relative 'instruction_plans/instruction_plan'
 require_relative 'instruction_plans/transaction_plan'
 require_relative 'instruction_plans/transaction_plan_result'

@@ -54,11 +54,11 @@ module Solana::Ruby::Kit
       config_max_instructions_per_transaction = max_instructions_per_transaction
 
       ->(instruction_plan, max_instructions_per_transaction: nil) {
-        resolved_max = max_instructions_per_transaction || config_max_instructions_per_transaction
-
         # Reject up front any configured maximum the transaction format could never satisfy,
         # rather than discovering it mid-plan when a message fails to compile.
-        InstructionPlans.assert_valid_max_instructions_per_transaction(resolved_max)
+        resolved_max = InstructionPlans.resolve_max_instructions_per_transaction(
+          max_instructions_per_transaction || config_max_instructions_per_transaction
+        )
 
         mutable = planner_traverse(
           instruction_plan,
@@ -194,17 +194,14 @@ module Solana::Ruby::Kit
           if Transactions.get_transaction_message_size(updated) <= Transactions::TRANSACTION_SIZE_LIMIT
             InstructionPlans.assert_max_instructions_per_transaction(
               updated.instructions.length,
-              InstructionPlans.resolve_max_instructions(ctx[:max_instructions_per_transaction])
+              ctx[:max_instructions_per_transaction]
             )
             candidate[:message] = updated
             return candidate
           end
         rescue SolanaError => e
-          next if [
-            SolanaError::INSTRUCTION_PLANS__MESSAGE_CANNOT_ACCOMMODATE_PLAN,
-            SolanaError::INSTRUCTION_PLANS__MAX_INSTRUCTIONS_PER_TRANSACTION_EXCEEDED
-          ].include?(e.code)
-          Kernel.raise
+          Kernel.raise unless InstructionPlans.message_packer_error_that_requires_new_candidate?(e)
+          # Try the next candidate.
         end
       end
       nil
@@ -228,7 +225,7 @@ module Solana::Ruby::Kit
 
       InstructionPlans.assert_max_instructions_per_transaction(
         updated_msg.instructions.length,
-        InstructionPlans.resolve_max_instructions(ctx[:max_instructions_per_transaction])
+        ctx[:max_instructions_per_transaction]
       )
 
       updated_msg
@@ -253,7 +250,7 @@ module Solana::Ruby::Kit
         end
         InstructionPlans.assert_max_instructions_per_transaction(
           updated.instructions.length,
-          InstructionPlans.resolve_max_instructions(ctx[:max_instructions_per_transaction])
+          ctx[:max_instructions_per_transaction]
         )
         updated
       when :message_packer
@@ -263,7 +260,7 @@ module Solana::Ruby::Kit
           msg = packer.pack_message_to_capacity(msg, max_instructions: ctx[:max_instructions_per_transaction])
           InstructionPlans.assert_max_instructions_per_transaction(
             msg.instructions.length,
-            InstructionPlans.resolve_max_instructions(ctx[:max_instructions_per_transaction])
+            ctx[:max_instructions_per_transaction]
           )
         end
         msg

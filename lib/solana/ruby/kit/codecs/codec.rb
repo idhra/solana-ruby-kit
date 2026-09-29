@@ -88,17 +88,33 @@ module Solana::Ruby::Kit
 
     # Prefix encoded data with its byte length using +prefix_codec+
     # (typically a u32 little-endian codec).
+    #
+    # On decode the inner codec sees exactly the prefixed number of bytes, as
+    # upstream's `addDecoderSizePrefix` does - so a variable-size inner codec
+    # such as +utf8_codec+ stops at its own end instead of reading the rest of
+    # the buffer. Fewer bytes than the prefix promises raise
+    # +CODECS__INVALID_BYTE_LENGTH+.
     sig { params(codec: Codec, prefix_codec: Codec).returns(Codec) }
     def add_codec_size_prefix(codec, prefix_codec)
-      enc = Encoder.new do |value|
+      inner_size = codec.fixed_size
+      fixed      = inner_size && prefix_codec.fixed_size && (inner_size + T.must(prefix_codec.fixed_size))
+      enc = Encoder.new(fixed_size: fixed) do |value|
         data   = codec.encode(value)
         prefix = prefix_codec.encode(data.bytesize)
         prefix + data
       end
-      dec = Decoder.new do |bytes, offset|
+      dec = Decoder.new(fixed_size: fixed) do |bytes, offset|
         len, prefix_size = prefix_codec.decode(bytes, offset: offset)
-        value, data_size = codec.decode(bytes, offset: offset + prefix_size)
-        [value, prefix_size + data_size]
+        len  = Kernel.Integer(len)
+        data = bytes.byteslice(offset + prefix_size, len) || ''.b
+        if data.bytesize < len
+          Kernel.raise SolanaError.new(
+            SolanaError::CODECS__INVALID_BYTE_LENGTH,
+            { codec_description: 'addDecoderSizePrefix', expected: len, actual: data.bytesize }
+          )
+        end
+        value, = codec.decode(data)
+        [value, prefix_size + len]
       end
       Codec.new(enc, dec)
     end

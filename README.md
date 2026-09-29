@@ -379,12 +379,17 @@ u16.decode("\xe8\x03")   # => [1000, 2]   # [value, bytes consumed]
 # Strings
 utf8  = Codecs.utf8_codec
 bytes = Codecs.bytes_codec(32)
+# A borsh-style string: a u32 byte length, then that many UTF-8 bytes.
+name  = Codecs.add_codec_size_prefix(utf8, u32)
 
 # Data structures
 struct_codec = Codecs.struct_codec([
   ['amount', u64],
+  ['name',   name],
   ['mint',   bytes]
 ])
+struct_codec.decode(struct_codec.encode({ amount: 5, name: 'gold', mint: "\x01".b * 32 }))
+# => [{ amount: 5, name: "gold", mint: "\x01\x01..." }, 48]
 ```
 
 #### UTF-8 options
@@ -412,6 +417,25 @@ Codecs.remove_null_characters("a\x00b")                        # => "ab"
 Note that `ignore_bom` follows `TextDecoder`'s confusing spelling: the default,
 `false`, *strips* the mark; `true` keeps it.
 
+#### Collection sizes
+
+`array_codec`, `map_codec` and `set_codec` take a `size:` that sets how the item
+count is stored:
+
+```ruby
+Codecs.array_codec(u8).encode([1, 2, 3])                          # => "\x03\x00\x00\x00\x01\x02\x03" (u32 count)
+Codecs.array_codec(u8, size: u8).encode([1, 2, 3])                # => "\x03\x01\x02\x03" (any number codec as the count)
+Codecs.array_codec(u8, size: Codecs.compact_u16_codec).encode([1]) # => "\x01\x01" (Solana's shortU16)
+Codecs.array_codec(u8, size: 3).encode([1, 2, 3])                 # => "\x01\x02\x03" (fixed count, no prefix)
+Codecs.array_codec(u8, size: 3).encode([1, 2])                    # raises SolanaError (wrong number of items)
+Codecs.array_codec(u8, size: :remainder).encode([1, 2, 3])        # => "\x01\x02\x03" (no prefix...)
+Codecs.array_codec(u8, size: :remainder).decode("\x01\x02\x03".b)  # => [[1, 2, 3], 3] (...reads to the end)
+```
+
+A `:remainder` array must be the last thing in the buffer. Upstream spells it
+`'remainder'`; Ruby uses the Symbol. The fifth option, a `Codecs::SentinelSize`,
+is described below.
+
 #### Requiring a size prefix
 
 A prefixed collection decodes an exhausted buffer to an empty collection rather
@@ -424,8 +448,34 @@ Codecs.array_codec(u8).decode(''.b)                              # => [[], 0]
 Codecs.array_codec(u8, require_size_prefix: true).decode(''.b)   # raises SolanaError
 ```
 
-`map_codec` and `set_codec` take the same option. It has no effect on
-fixed-count collections, which carry no prefix.
+`map_codec` and `set_codec` take the same option, and it applies to a custom
+count codec too. It has no effect on fixed-count, `:remainder` or
+sentinel-terminated collections, none of which carries a prefix.
+
+#### Sentinel-terminated collections
+
+Instead of a length prefix, `size:` can be a `Codecs::SentinelSize`: the
+collection ends where the bytes at the next item position match the sentinel.
+It is compared at item boundaries only, so its bytes may appear *inside* an item.
+
+```ruby
+zero = Codecs::SentinelSize.new(sentinel: "\x00".b)
+list = Codecs.array_codec(u8, size: zero)
+list.encode([1, 2, 3])            # => "\x01\x02\x03\x00"
+list.decode("\x01\x02\x03\x00".b)  # => [[1, 2, 3], 4]
+list.decode("\x01\x02".b)          # raises SolanaError (sentinel missing)
+
+# :optional still writes the sentinel but tolerates its absence on decode;
+# :omitted never writes it. Both stop at the end of the bytes.
+lenient = Codecs.array_codec(u8, size: Codecs::SentinelSize.new(sentinel: "\x00".b, strategy: :optional))
+lenient.decode("\x01\x02".b)       # => [[1, 2], 2]
+```
+
+`map_codec` and `set_codec` accept the same `size:`. The codec does **not**
+check two invariants, so it is up to you to make sure they hold. First, no item
+may *begin* with the sentinel's bytes, or decoding stops early at that item.
+Second, under `:optional` / `:omitted` the sentinel must be no wider than the
+smallest item, or a short trailing item is silently dropped.
 
 #### Tap combinators
 
@@ -744,6 +794,38 @@ Plans.parallel_instruction_plan([ix1, ix2])            # any order / same tx
 Plans.get_linear_message_packer_instruction_plan(
   total_length:    data.bytesize,
   get_instruction: ->(offset, length) { build_write_ix(offset, data[offset, length]) }
+)
+
+# ── 5. Custom message packers ────────────────────────────────────────────────
+# A custom packer enforces the same limits the built-in ones do, and can refuse a
+# message for a reason of its own with MESSAGE_REJECTED_BY_PACKER. The planner
+# treats all three errors as "try another message"
+# (Plans.message_packer_error_that_requires_new_candidate?).
+one_per_message = Plans::MessagePackerInstructionPlan.new(
+  get_message_packer: -> {
+    remaining = [ix1, ix2]
+    Plans::MessagePacker.new(
+      done_proc: -> { remaining.empty? },
+      pack_proc: ->(message, max_instructions) {
+        max = Plans.resolve_max_instructions_per_transaction(max_instructions)
+        Plans.assert_max_instructions_per_transaction(message.instructions.length + 1, max)
+        unless message.instructions.empty?
+          raise Kit::SolanaError.new(
+            Kit::SolanaError::INSTRUCTION_PLANS__MESSAGE_REJECTED_BY_PACKER,
+            { reason: 'these instructions must each have a transaction to themselves' }
+          )
+        end
+        next_message = Kit::TransactionMessages.append_instructions(message, [remaining.first])
+        Plans.assert_message_can_accommodate_size(
+          current_size: Kit::Transactions.get_transaction_message_size(message),
+          next_size:    Kit::Transactions.get_transaction_message_size(next_message),
+          size_limit:   Kit::Transactions::TRANSACTION_SIZE_LIMIT
+        )
+        remaining.shift
+        next_message
+      }
+    )
+  }
 )
 ```
 

@@ -171,6 +171,33 @@ RSpec.describe RubyKit::TransactionIntrospection do
     end
   end
 
+  describe '.decode_compiled_transaction_message' do
+    # A legacy message is a 3-byte header followed by a shortU16 account count.
+    # Since kit 56b49609 that count is bounded to three bytes and the u16 domain.
+    it 'rejects an account count whose shortU16 chain exceeds three bytes' do
+      bytes = [1, 0, 0, 0xff, 0xff, 0xff, 0x00].pack('C*')
+      expect { described_class.decode_compiled_transaction_message(bytes) }
+        .to raise_error(RubyKit::SolanaError) { |e|
+          expect(e.code).to eq(RubyKit::SolanaError::CODECS__INVALID_BYTE_LENGTH)
+        }
+    end
+
+    it 'rejects an account count whose shortU16 decodes above 65535' do
+      bytes = [1, 0, 0, 0x80, 0x80, 0x04].pack('C*')
+      expect { described_class.decode_compiled_transaction_message(bytes) }
+        .to raise_error(RubyKit::SolanaError) { |e|
+          expect(e.code).to eq(RubyKit::SolanaError::CODECS__NUMBER_OUT_OF_RANGE)
+        }
+    end
+
+    it 'still reports a truncated shortU16 chain as a malformed message' do
+      expect { described_class.decode_compiled_transaction_message([1, 0, 0, 0x80].pack('C*')) }
+        .to raise_error(RubyKit::SolanaError) { |e|
+          expect(e.code).to eq(RubyKit::SolanaError::TRANSACTION_INTROSPECTION__MALFORMED_COMPILED_MESSAGE)
+        }
+    end
+  end
+
   describe '.get_instructions_from_compiled_transaction_message' do
     it 'resolves account indices back to the original AccountMetas' do
       compiled = described_class.decode_compiled_transaction_message(transaction.message_bytes)

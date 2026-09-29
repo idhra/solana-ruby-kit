@@ -99,6 +99,11 @@ module Solana::Ruby::Kit
     CODECS__INVALID_UTF8_BYTES                           = :SOLANA_ERROR__CODECS__INVALID_UTF8_BYTES
     # context: { index:, value: }
     CODECS__INVALID_UTF8_STRING                          = :SOLANA_ERROR__CODECS__INVALID_UTF8_STRING
+    # context: { codec_description:, min:, max:, value: }
+    CODECS__NUMBER_OUT_OF_RANGE                          = :SOLANA_ERROR__CODECS__NUMBER_OUT_OF_RANGE
+    # context: { codec_description:, hex_sentinel:, sentinel: }
+    CODECS__SENTINEL_MISSING_AT_END_OF_BYTES             = :SOLANA_ERROR__CODECS__SENTINEL_MISSING_AT_END_OF_BYTES
+    CODECS__SENTINEL_MUST_NOT_BE_EMPTY                   = :SOLANA_ERROR__CODECS__SENTINEL_MUST_NOT_BE_EMPTY
 
     # ── RPC / JSON-RPC ────────────────────────────────────────────────────────
     RPC__INTEGER_OVERFLOW_WHILE_SERIALIZING_LARGE_INTEGER = :SOLANA_ERROR__RPC__INTEGER_OVERFLOW_WHILE_SERIALIZING_LARGE_INTEGER
@@ -138,6 +143,8 @@ module Solana::Ruby::Kit
     INSTRUCTION_PLANS__INVALID_MAX_INSTRUCTIONS_PER_TRANSACTION = :SOLANA_ERROR__INSTRUCTION_PLANS__INVALID_MAX_INSTRUCTIONS_PER_TRANSACTION
     # context: { max_instructions:, num_instructions: }
     INSTRUCTION_PLANS__MAX_INSTRUCTIONS_PER_TRANSACTION_EXCEEDED = :SOLANA_ERROR__INSTRUCTION_PLANS__MAX_INSTRUCTIONS_PER_TRANSACTION_EXCEEDED
+    # context: { reason: }
+    INSTRUCTION_PLANS__MESSAGE_REJECTED_BY_PACKER            = :SOLANA_ERROR__INSTRUCTION_PLANS__MESSAGE_REJECTED_BY_PACKER
 
     # ── Transaction introspection ────────────────────────────────────────────
     TRANSACTION_INTROSPECTION__CANNOT_DECODE_JSON_PARSED_TRANSACTION = :SOLANA_ERROR__TRANSACTION_INTROSPECTION__CANNOT_DECODE_JSON_PARSED_TRANSACTION
@@ -237,7 +244,7 @@ module Solana::Ruby::Kit
         CODECS__EXPECTED_POSITIVE_BYTE_LENGTH            => 'Expected a positive byte length, got %{byte_length}',
         CODECS__ENCODER_DECODER_FIXED_SIZE_MISMATCH      => 'Encoder fixed size (%{encoder_size}) does not match decoder fixed size (%{decoder_size})',
         CODECS__ENCODER_DECODER_MAX_SIZE_MISMATCH        => 'Encoder max size (%{encoder_max}) does not match decoder max size (%{decoder_max})',
-        CODECS__INVALID_NUMBER_OF_ITEMS                  => 'Expected %{expected} items but got %{actual}',
+        CODECS__INVALID_NUMBER_OF_ITEMS                  => 'Expected [%{codec_description}] to have %{expected} items, got %{actual}.',
         CODECS__ENUM_DISCRIMINATOR_OUT_OF_RANGE          => 'Enum discriminator %{discriminator} is out of range [0, %{max}]',
         CODECS__UNION_VARIANT_OUT_OF_RANGE               => 'Union variant index %{index} is out of range',
         CODECS__OFFSET_OUT_OF_RANGE                      => 'Codec offset %{offset} is out of range for byte array of length %{byte_length}',
@@ -250,6 +257,9 @@ module Solana::Ruby::Kit
         CODECS__FIXED_NULLABLE_CANNOT_WRAP_VARIABLE_SIZE_CODEC => 'A fixed-size nullable codec cannot wrap a variable-size codec',
         CODECS__INVALID_UTF8_BYTES                       => 'Invalid UTF-8 byte sequence at offset %{offset}',
         CODECS__INVALID_UTF8_STRING                      => 'Invalid UTF-8 string at index %{index}',
+        CODECS__NUMBER_OUT_OF_RANGE                      => 'Codec [%{codec_description}] expected number to be in the range [%{min}, %{max}], got %{value}.',
+        CODECS__SENTINEL_MISSING_AT_END_OF_BYTES         => 'Codec [%{codec_description}] expected sentinel [%{hex_sentinel}] to terminate the collection, but reached the end of the byte array without it.',
+        CODECS__SENTINEL_MUST_NOT_BE_EMPTY               => 'The sentinel must not be empty.',
 
         # RPC
         RPC__INTEGER_OVERFLOW_WHILE_SERIALIZING_LARGE_INTEGER   => 'Integer overflow while serializing large integer %{value}',
@@ -287,6 +297,7 @@ module Solana::Ruby::Kit
         INSTRUCTION_PLANS__FAILED_TO_EXECUTE_TRANSACTION_PLAN => 'Failed to execute transaction plan',
         INSTRUCTION_PLANS__INVALID_MAX_INSTRUCTIONS_PER_TRANSACTION => 'The configured maximum of %{max_instructions} instructions per transaction is invalid. It must be a positive integer no greater than the transaction format limit of %{transaction_instruction_limit} instructions per transaction.',
         INSTRUCTION_PLANS__MAX_INSTRUCTIONS_PER_TRANSACTION_EXCEEDED => 'Planning this transaction message would require %{num_instructions} instructions, which exceeds the configured maximum of %{max_instructions} instructions per transaction.',
+        INSTRUCTION_PLANS__MESSAGE_REJECTED_BY_PACKER         => 'The message packer rejected the provided transaction message: %{reason}.',
 
         # Transaction introspection
         TRANSACTION_INTROSPECTION__CANNOT_DECODE_JSON_PARSED_TRANSACTION => "Cannot decode a 'jsonParsed'-encoded getTransaction response; its instructions are pre-parsed and lack raw bytes. Fetch with encoding: 'json' or 'base64' instead.",

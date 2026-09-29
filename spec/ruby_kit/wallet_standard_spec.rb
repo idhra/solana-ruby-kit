@@ -115,6 +115,22 @@ RSpec.describe RubyKit::WalletStandard do
           end
       end
 
+      # The signature count is a shortU16; since kit 56b49609 a chain longer than
+      # three bytes, or one decoding past 65535, is rejected rather than read on.
+      it 'rejects a signature count whose shortU16 chain exceeds three bytes' do
+        expect { described_class.decode_wire_transaction([0xff, 0xff, 0xff, 0x00].pack('C*')) }
+          .to raise_error(RubyKit::SolanaError) { |e|
+            expect(e.code).to eq(RubyKit::SolanaError::CODECS__INVALID_BYTE_LENGTH)
+          }
+      end
+
+      it 'rejects a signature count whose shortU16 decodes above 65535' do
+        expect { described_class.decode_wire_transaction([0x80, 0x80, 0x04].pack('C*')) }
+          .to raise_error(RubyKit::SolanaError) { |e|
+            expect(e.code).to eq(RubyKit::SolanaError::CODECS__NUMBER_OUT_OF_RANGE)
+          }
+      end
+
       it 'raises WALLET_STANDARD__INVALID_WIRE_FORMAT when the message section is absent' do
         # compact-u16(0) with no message bytes after it
         expect { described_class.decode_wire_transaction("\x00".b) }

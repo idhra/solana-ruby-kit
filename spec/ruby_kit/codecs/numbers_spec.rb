@@ -101,6 +101,47 @@ RSpec.describe RubyKit::Codecs::Numbers do
     it 'round-trips 300' do
       expect(codec.decode(codec.encode(300)).first).to eq(300)
     end
+
+    it 'round-trips the u16 maximum in 3 bytes' do
+      expect(codec.encode(65_535).bytes).to eq([0xff, 0xff, 0x03])
+      expect(codec.decode([0xff, 0xff, 0x03].pack('C*'))).to eq([65_535, 3])
+    end
+
+    # Before upstream's fix (kit 56b49609) the decoder had no bound: a
+    # truncated chain read a missing byte as 0 and terminated, and a chain
+    # could run past three bytes into values well outside the u16 domain.
+    it 'raises when the buffer ends before the continuation chain terminates' do
+      expect { codec.decode([0x80].pack('C*')) }.to raise_error(RubyKit::SolanaError) { |e|
+        expect(e.code).to eq(RubyKit::SolanaError::CODECS__INVALID_BYTE_LENGTH)
+        expect(e.context).to eq(codec_description: 'shortU16', expected: 2, actual: 1)
+      }
+      expect { codec.decode([0x80, 0x80].pack('C*')) }.to raise_error(RubyKit::SolanaError) { |e|
+        expect(e.context).to eq(codec_description: 'shortU16', expected: 3, actual: 2)
+      }
+    end
+
+    it 'counts the remaining bytes from the offset when the chain is truncated' do
+      expect { codec.decode([0x00, 0x80].pack('C*'), offset: 1) }.to raise_error(RubyKit::SolanaError) { |e|
+        expect(e.context).to eq(codec_description: 'shortU16', expected: 2, actual: 1)
+      }
+    end
+
+    it 'rejects continuation chains that exceed the three-byte encoding' do
+      [[0xff, 0xff, 0xff, 0x00], [0xff, 0xff, 0xff]].each do |bytes|
+        expect { codec.decode(bytes.pack('C*')) }.to raise_error(RubyKit::SolanaError) { |e|
+          expect(e.code).to eq(RubyKit::SolanaError::CODECS__INVALID_BYTE_LENGTH)
+          expect(e.context).to eq(codec_description: 'shortU16', expected: 3, actual: 4)
+        }
+      end
+    end
+
+    it 'rejects terminated three-byte encodings above the u16 domain' do
+      # No continuation bit on the third byte, but 0x04 << 14 is 65536.
+      expect { codec.decode([0x80, 0x80, 0x04].pack('C*')) }.to raise_error(RubyKit::SolanaError) { |e|
+        expect(e.code).to eq(RubyKit::SolanaError::CODECS__NUMBER_OUT_OF_RANGE)
+        expect(e.context).to eq(codec_description: 'shortU16', min: 0, max: 65_535, value: 65_536)
+      }
+    end
   end
 
   # u256/i256 were added upstream alongside a refactor that routes u128, i128,

@@ -5,7 +5,7 @@ require_relative '../errors'
 require_relative '../instructions/instruction'
 require_relative '../transaction_messages/transaction_message'
 require_relative '../transactions/compiler'
-require_relative 'max_instructions'
+require_relative 'message_packer_errors'
 
 module Solana::Ruby::Kit
   module InstructionPlans
@@ -84,6 +84,14 @@ module Solana::Ruby::Kit
       #
       # +max_instructions+ caps the number of top-level instructions allowed in the
       # returned message (defaults to 16; must be a positive integer no greater than 64).
+      #
+      # A custom packer can enforce those limits with
+      # InstructionPlans.resolve_max_instructions_per_transaction,
+      # .assert_max_instructions_per_transaction and .assert_message_can_accommodate_size,
+      # and may raise INSTRUCTION_PLANS__MESSAGE_REJECTED_BY_PACKER (with a +reason:+) to
+      # refuse a message for any other reason - e.g. a constraint specific to the
+      # instructions being packed. The planner then tries another message; see
+      # InstructionPlans.message_packer_error_that_requires_new_candidate?.
       sig do
         params(
           message:          TransactionMessages::TransactionMessage,
@@ -148,8 +156,7 @@ module Solana::Ruby::Kit
                 Kernel.raise SolanaError.new(SolanaError::INSTRUCTION_PLANS__MESSAGE_PACKER_ALREADY_COMPLETE)
               end
 
-              InstructionPlans.assert_valid_max_instructions_per_transaction(max_instructions)
-              resolved_max = InstructionPlans.resolve_max_instructions(max_instructions)
+              resolved_max = InstructionPlans.resolve_max_instructions_per_transaction(max_instructions)
               InstructionPlans.assert_max_instructions_per_transaction(message.instructions.length + 1, resolved_max)
 
               base_ix    = get_instruction.call(offset, 0)
@@ -194,8 +201,7 @@ module Solana::Ruby::Kit
                 Kernel.raise SolanaError.new(SolanaError::INSTRUCTION_PLANS__MESSAGE_PACKER_ALREADY_COMPLETE)
               end
 
-              InstructionPlans.assert_valid_max_instructions_per_transaction(max_instructions)
-              resolved_max = InstructionPlans.resolve_max_instructions(max_instructions)
+              resolved_max = InstructionPlans.resolve_max_instructions_per_transaction(max_instructions)
               InstructionPlans.assert_max_instructions_per_transaction(message.instructions.length + 1, resolved_max)
 
               original_size = Transactions.get_transaction_message_size(message)
@@ -212,18 +218,16 @@ module Solana::Ruby::Kit
                 end
 
                 next_packed = TransactionMessages.append_instructions(packed, [T.must(instructions[i])])
-                size        = Transactions.get_transaction_message_size(next_packed)
+                next_size   = Transactions.get_transaction_message_size(next_packed)
+                size_limit  = Transactions::TRANSACTION_SIZE_LIMIT
 
-                if size > Transactions::TRANSACTION_SIZE_LIMIT
-                  if i == start_idx
-                    Kernel.raise SolanaError.new(
-                      SolanaError::INSTRUCTION_PLANS__MESSAGE_CANNOT_ACCOMMODATE_PLAN,
-                      {
-                        num_bytes_required: size - original_size,
-                        num_free_bytes:     Transactions::TRANSACTION_SIZE_LIMIT - original_size
-                      }
-                    )
-                  end
+                if i == start_idx
+                  # The count was already asserted above, so the first instruction can
+                  # only fail to fit because of the transaction size limit.
+                  InstructionPlans.assert_message_can_accommodate_size(
+                    current_size: original_size, next_size: next_size, size_limit: size_limit
+                  )
+                elsif next_size > size_limit
                   idx = i
                   return packed
                 end
@@ -240,7 +244,9 @@ module Solana::Ruby::Kit
     end
 
     # Creates a MessagePackerInstructionPlan that splits +total_size+ bytes into
-    # chunks of REALLOC_LIMIT (10,240) bytes, calling +get_instruction.(size)+.
+    # chunks of at most REALLOC_LIMIT (10,240) bytes and creates one instruction
+    # per chunk, calling +get_instruction.(size)+. A +total_size+ that is an exact
+    # multiple of the limit yields only full-sized chunks, and zero yields none.
     # Mirrors `getReallocMessagePackerInstructionPlan({ getInstruction, totalSize })`.
     sig do
       params(
@@ -249,13 +255,12 @@ module Solana::Ruby::Kit
       ).returns(MessagePackerInstructionPlan)
     end
     def get_realloc_message_packer_instruction_plan(total_size:, get_instruction:)
-      realloc_limit      = 10_240
-      num_instructions   = (total_size.to_f / realloc_limit).ceil
-      last_size          = total_size % realloc_limit
-
-      instructions = num_instructions.times.map do |i|
-        chunk = (i == num_instructions - 1) ? last_size : realloc_limit
-        get_instruction.call(chunk)
+      realloc_limit = 10_240
+      instructions  = []
+      remaining     = total_size
+      while remaining.positive?
+        instructions << get_instruction.call([realloc_limit, remaining].min)
+        remaining -= realloc_limit
       end
 
       get_message_packer_instruction_plan_from_instructions(instructions)
